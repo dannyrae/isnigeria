@@ -3,6 +3,8 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const sendMail = require("../utils/send-email");
 const template = require("../files/email-notification");
+const cloudinary = require("../utils/cloudinary")
+const fs = require("fs")
 
 /**
  * @desc Sign up
@@ -22,26 +24,30 @@ const signup = async (req, res) => {
         }
 
         const hashedPass = await bcrypt.hash(req.body.password, 10);
-        // console.log("I am here")
 
-        // if (!req.file) {
-        //     console.log("No PDF file uploaded");
-        //     return res.status(400).json({
-        //         status: "error",
-        //         message: "PDF is required for portfolio",
-        //     });
-        // }
+        if (!req.file) {
+            console.log("No PDF file uploaded");
+            return res.status(400).json({
+                status: "error",
+                message: "PDF is required for portfolio",
+            });
+        }
 
-        // console.log(req.file)
+        const result = await cloudinary.uploader.upload(req.file.path, {
+            resource_type: "raw",
+        });
+    
+        if (!result || !result.secure_url) {
+            throw new Error("Cloudinary upload failed");
+        }
 
-        // create user object
         const newUser = new User({
             business_name: req.body.businessName,
             business_description: req.body.businessDescription,
             business_type: req.body.businessType,
             email: req.body.email,
             password: hashedPass,
-            // portfolio: req.file.path,
+            portfolio: result.secure_url,
         });
 
         await sendMail(
